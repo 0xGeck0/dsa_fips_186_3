@@ -20,5 +20,3 @@ Ce projet de Master 2 consiste à implémenter l'algorithme de signature numéri
 3. Programme de Benchmark (10 000 itérations).
 4. Résultats du Benchmark et spécifications de la machine.
 
-## Utilisation
-(Les commandes de compilation et d'exécution `javac` et `java` seront ajoutées ici ultérieurement).
