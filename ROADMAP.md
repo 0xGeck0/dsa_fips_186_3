@@ -42,6 +42,6 @@ Cette feuille de route détaille les étapes de développement pour l'implément
 - [x] Enregistrer les résultats et les spécifications de la machine de test.
 
 ## Étape 6 : Finalisation et Rapport
-- [ ] Nettoyer, commenter et structurer le code.
-- [ ] Rédiger le rapport d'implémentation justifiant les choix techniques.
-- [ ] Mettre à jour le fichier `MANUAL.md` avec les instructions d'utilisation.
+- [x] Nettoyer, commenter et structurer le code.
+- [x] Rédiger le rapport d'implémentation justifiant les choix techniques.
+- [x] Mettre à jour le fichier `MANUEL.md` avec les instructions d'utilisation.

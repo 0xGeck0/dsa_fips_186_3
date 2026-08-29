@@ -1,0 +1,143 @@
+\documentclass[12pt,a4paper]{article}
+
+% Packages pour le français et les caractères spéciaux
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+
+% Marges et mise en page
+\usepackage{geometry}
+\geometry{a4paper, margin=2.5cm}
+
+% Pour les mathématiques et la couleur
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{xcolor}
+
+% Pour les liens cliquables
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue
+}
+
+% Pour insérer des images
+\usepackage{graphicx}
+
+\begin{document}
+
+% --- DÉBUT DE LA PAGE DE GARDE ---
+\begin{titlepage}
+    \centering
+    
+    \includegraphics[width=10cm]{logo_univ_rennes_1.png}\par
+    \vspace{1.5cm}
+    
+    {\scshape\Large Université de Rennes \\ Master Mathématiques et Applications\\
+    \vspace{0.3cm}
+    \large Parcours Mathématiques de l'information, cryptographie\par}
+    \vspace{2cm}
+    
+    {\huge\bfseries Rapport d'Implémentation\par}
+    \vspace{0.5cm}
+    {\Large Signature Numérique DSA (FIPS 186-3) et Hachage SHA-3\par}
+    \vspace{2cm}
+    
+    {\Large\itshape Alexandre ACCIARI\par}
+    \vfill
+    
+    Professeur : Sylvain Duquesne\par
+    \vspace{1cm}
+    
+    {\large \today\par}
+\end{titlepage}
+% --- FIN DE LA PAGE DE GARDE ---
+
+% --- RÉSUMÉ ---
+\begin{abstract}
+Ce rapport détaille l'implémentation de l'algorithme de signature numérique DSA (Digital Signature Algorithm) selon les spécifications de la norme FIPS 186-3, pour un niveau de sécurité de 80 bits. Le développement, réalisé en Java, comprend la génération sécurisée des paramètres de domaine et des clés, ainsi que les algorithmes de signature (sign) et de vérification (verify). Pour garantir l'intégrité des messages de taille arbitraire, la fonction de hachage SHA-3 a été implémentée depuis zéro. Ce document présente l'architecture logicielle, les défis techniques liés à l'arithmétique multiprécision et à l'orienté objet, ainsi qu'une analyse des performances (Benchmark) démontrant la viabilité de l'implémentation.
+\end{abstract}
+\vspace{1cm}
+
+% --- SOMMAIRE ---
+\newpage
+\tableofcontents
+\newpage
+
+%----------------------- 1. -----------------------
+%     INTRODUCTION ET FONDEMENTS MATHEMATIQUES     
+%--------------------------------------------------
+
+\section{Introduction et fondements mathématiques}
+L'objectif de ce projet est le développement d'un moteur cryptographique asymétrique basé sur le \textbf{Digital Signature Algorithm (DSA)}. Contrairement à l'utilisation de bibliothèques haut niveau, ce travail impose une compréhension de la norme \textbf{FIPS 186-3} \cite{fips186}. 
+
+L'implémentation vise un niveau de sécurité de 80 bits. Mathématiquement, le système repose sur la difficulté du problème du logarithme discret dans un sous-groupe fini. Les paramètres de domaine imposés sont :
+\begin{itemize}
+    \item Un module premier $p$ de 1024 bits.
+    \item Un diviseur premier $q$ de 160 bits tel que $q$ divise $p-1$.
+    \item Un générateur $g = 2^{(p-1)/q} \pmod p$.
+\end{itemize}
+
+La sécurité globale du processus étant limitée par le maillon le plus faible \cite{fips186}, l'utilisation d'une fonction de hachage cryptographique robuste était indispensable. C'est pourquoi la norme \textbf{FIPS 202} (SHA-3) a été intégrée au projet.
+
+%----------------------- 2. -----------------------
+%  ARCHITECTURE ET INGENIERIE LOGICIELLE EN JAVA
+%--------------------------------------------------
+
+\section{Architecture et ingénierie logicielle en Java}
+La traduction de ce standard cryptographique en langage Java a nécessité des choix architecturaux précis.
+
+\subsection{Arithmétique multiprécision}
+Les types primitifs standards de Java (comme \texttt{long}) étant strictement limités à 64 bits sont insuffisants pour manipuler des clés de 160 ou 1024 bits. L'ensemble de la logique DSA a donc été construit autour de la classe \texttt{java.math.BigInteger}, qui offre une précision arbitraire et gère nativement l'arithmétique modulaire (notamment avec la méthode \texttt{modPow}).
+
+\subsection{Modèle orienté objet et portée des variables}
+Une difficulté classique en Java concerne la gestion des états internes et la portée des variables. L'algorithme a été architecturé autour de classes instanciables (\texttt{DSA} et \texttt{SHA3}). Cette transition d'un modèle de fonctions statiques vers des objets instanciés (\texttt{new DSA()}) a permis de sécuriser les attributs de domaine ($p, q, g$) et de garantir que la clé privée $x$ reste encapsulée sans interférer avec d'autres espaces mémoire.
+
+%----------------------- 3. -----------------------
+%          DEFIS TECHNIQUES ET SOLUTIONS
+%--------------------------------------------------
+
+\section{Défis techniques et solutions}
+
+\subsection{L'éponge Keccak et le padding SHA-3}
+L'algorithme SHA-3 fonctionne selon le principe de la construction en éponge, avec une phase d'absorption et une d'extraction. Le défi technique majeur fut la gestion du remplissage (\textit{padding} multi-rate \texttt{pad10*1}).
+
+Un bogue d'indexation (\texttt{ArrayIndexOutOfBoundsException}) survenait lors de l'absorption du dernier bloc si le message était plus petit que le taux d'absorption (136 octets). La solution a consisté à isoler le dernier bloc dans un tampon mémoire dynamique, garantissant ainsi le hachage sécurisé de fichiers de taille arbitraire.
+
+\subsection{Inversion modulaire et secret éphémère}
+La norme DSA exige la génération d'un secret éphémère $k$ unique pour chaque signature. Le calcul de la composante $s$ de la signature nécessite l'inverse modulaire $k^{-1} \pmod q$. Ce calcul a été sécurisé en déléguant l'algorithme d'Euclide étendu à la méthode \texttt{modInverse} de \texttt{BigInteger}, évitant ainsi les vulnérabilités liées à une implémentation manuelle.
+
+%----------------------- 4. -----------------------
+%             ANALYSE DES PERFORMANCES
+%--------------------------------------------------
+
+\section{Analyse des performances (Benchmark)}
+Pour évaluer la viabilité et la rapidité du code, un programme de \textit{benchmark} mesurant 10 000 itérations de signatures et de vérifications a été développé en utilisant la méthode \texttt{System.nanoTime()}.
+
+\subsection{La chauffe de la machine virtuelle Java (JVM)}
+En Java, le compilateur JIT (\textit{Just-In-Time}) optimise le code à la volée. Si le chronométrage débute dès la première itération, le temps de compilation biaise les résultats. Alors, une boucle à vide (\textit{Warm-up}) de 1 000 itérations a donc été intégrée avant le déclenchement du chronomètre pour isoler le temps de calcul cryptographique.
+
+\subsection{Résultats et environnement de test}
+Les tests ont été exécutés sur un système d'exploitation GNU/Linux \textbf{Ubuntu 24.04.4 LTS}, équipé d'un processeur \textbf{Intel Core i7-8565U @ 1.80GHz} et de \textbf{16 Go} (15 GiB) de mémoire vive.
+
+Sur une boucle de 10 000 itérations complètes (hachage SHA-3, signature DSA, vérification DSA), le temps total écoulé fut d'environ \textbf{3000 ms}. La moyenne s'établit donc à un temps exceptionnel de \textbf{  ms par opération complète}. Le programme est ainsi capable de valider plus de 3300 signatures par seconde sur une architecture matérielle standard, validant ainsi l'efficacité de l'implémentation.
+
+\newpage
+\renewcommand{\refname}{Bibliographie}
+\begin{thebibliography}{9}
+
+\bibitem{fips186}
+National Institute of Standards and Technology (NIST), 
+\emph{Digital Signature Standard (DSS)}, 
+Federal Information Processing Standards Publication (FIPS PUB) 186-3, Juin 2009.
+
+\bibitem{fips202}
+National Institute of Standards and Technology (NIST), 
+\emph{SHA-3 Standard: Permutation-Based Hash and Extendable-Output Functions}, 
+Federal Information Processing Standards Publication (FIPS PUB) 202, Août 2015.
+
+\end{thebibliography}
+
+\end{document}

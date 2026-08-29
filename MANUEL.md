@@ -1,4 +1,4 @@
-# Manuel d'Utilisation - Implémentation DSA
+# Manuel d'utilisation - Implémentation DSA
 
 *Ce fichier sera complété au fur et à mesure du développement de l'application.*
 
